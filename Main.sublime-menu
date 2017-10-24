@@ -19,10 +19,22 @@
     //     "command": "set_update_set"
     // },
      {
+        "id": "instance",
+        "caption": "Enter Instance",
+        "command": "enter_instance"
+    },{
         "id": "auth",
         "caption": "Enter Credentials",
         "command": "enter_credentials"
-    }, 
+    },{
+        "id": "enable_proxy",
+        "caption": "Enable Proxy",
+        "command": "enable_proxy"
+    },{
+        "id": "disable_proxy",
+        "caption": "Disable Proxy",
+        "command": "disable_proxy"
+    },
     // {
     //     "id": "snow_folder_sets",
     //     "caption": "Initialize Folders",
