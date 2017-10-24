@@ -693,9 +693,70 @@ class EnterCredentialsCommand(sublime_plugin.WindowCommand):
         return is_sn(self.window.folders()) is True
 
 
+class EnterInstanceCommand(sublime_plugin.WindowCommand):
+    settings = dict()
+    dir = ""
+
+    def run(self):
+        self.dir = self.window.folders()[0]
+        self.window.show_input_panel("Instance Name:", "", self.create_instance, None, None)
+
+        return
+
+    def create_instance(self, instance):
+        save_setting(self.dir, "instance", instance)
+
+    def is_visible(self):
+        return is_sn(self.window.folders()) is True
+
+
 class CreateDiffScratchCommand(sublime_plugin.TextCommand):
     def run(self, edit, content):
         self.view.insert(edit, 0, content)
+
+
+class EnableProxyCommand(sublime_plugin.WindowCommand):
+    settings = dict()
+    schema = ""
+    proxy = ""
+    user = ""
+    dir = ""
+
+    def run(self):
+        self.dir = self.window.folders()[0]
+        self.window.show_input_panel("Schema:", "", self.create_schema, None, None)
+
+    def create_schema(self, schema):
+        self.schema = schema
+        self.window.show_input_panel("Proxy domain:", "", self.create_proxy, None, None)
+
+    def create_proxy(self, proxy):
+        self.proxy = proxy
+        self.window.show_input_panel("User Name:", "", self.create_user, None, None)
+
+    def create_user(self, user):
+        self.user = user
+        self.window.show_input_panel("Password:", "", self.create_pass, None, None)
+
+    def create_pass(self, password):
+        url = self.schema + "://" + self.user + ":" + password + "@" + self.proxy 
+        encoded_cred = base64.encodestring(bytes(url, "utf-8"))
+        save_setting(self.dir, "proxy", "Proxy " + encoded_cred.decode("utf-8").replace("\n", ""))
+
+    def is_visible(self):
+        return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is False
+
+
+class DisableProxyCommand(sublime_plugin.WindowCommand):
+    settings = dict()
+    dir = ""
+
+    def run(self):
+        self.dir = self.window.folders()[0]
+        save_setting(self.dir, "proxy", "")
+
+    def is_visible(self):
+        return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is True
 
 
 def write_doc_file(the_file, doc):
@@ -704,7 +765,6 @@ def write_doc_file(the_file, doc):
     f.close()
 
     return
-
 
 def is_sn(dirs):
     if len(dirs) == 0:
@@ -858,14 +918,35 @@ def diff_doc_to_doc(original_doc, doc):
 
     return diffs
 
-def http_proxy():
-		handler = urllib.request.ProxyHandler();
-		opener = urllib.request.build_opener(handler);
-		urllib.request.install_opener(opener);
+
+def has_proxy(dirs):
+	# sublime.load_settings('servicenow-sync-proxy.sublime-settings') TODO: globalproxy setup
+	if is_sn(dirs) is True:
+		settings = load_settings(dirs[0])
+		if settings is not False:
+			if "proxy" in settings and settings["proxy"] is not "":
+				return True
+			else:
+				return False
+
+	return False;
+
+
+def http_proxy(settings):
+		if "proxy" in settings and settings["proxy"] is not "":
+			proxy = settings["proxy"].replace("Proxy ", "")
+			url = base64.decodestring(bytes(proxy, "utf-8")).decode("utf-8")
+			handler = urllib.request.ProxyHandler({
+						"http": url,
+						"https": url,
+					})
+			opener = urllib.request.build_opener(handler);
+			urllib.request.install_opener(opener);
+
 
 # noinspection PyUnresolvedReferences
 def http_call(settings, url, data="", content="application/json"):
-    http_proxy()
+    http_proxy(settings)
 
     if type(data) == dict:
         data = json.dumps(data).encode('utf8')
@@ -888,9 +969,11 @@ def http_call(settings, url, data="", content="application/json"):
         http_file = urllib.request.urlopen(request, timeout=timeout)
         result = http_file.read()
     except urllib.error.HTTPError as e:
-        err = 'Error %s' % (str(e.code))
+        err = 'Error %s' % (str(e))
     except urllib.error.URLError as e:
-        err = 'Error %s' % (str(e.code))
+        err = 'Error %s' % (str(e))
+    except Exception as e:
+    	  err = 'Error %s' % (str(e))
 
     if err != "":
         print(err)
@@ -934,8 +1017,9 @@ def get_list(settings, table, query):
         response_data = json.loads(http_call(settings, url, data))['records']
 
         return response_data
-    except:
+    except Exception as err:
         print("An Error occurred while attempting to connect to the instance.")
+        print ( err )
         return False
 
 
