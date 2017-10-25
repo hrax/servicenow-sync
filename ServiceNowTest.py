@@ -717,35 +717,48 @@ class CreateDiffScratchCommand(sublime_plugin.TextCommand):
 
 class EnableProxyCommand(sublime_plugin.WindowCommand):
     settings = dict()
-    schema = ""
-    proxy = ""
-    user = ""
     dir = ""
+    domain = ""
+    port = ""
+    user = ""
 
     def run(self):
         self.dir = self.window.folders()[0]
-        self.window.show_input_panel("Schema:", "", self.create_schema, None, None)
+        self.window.show_input_panel("Proxy domain:", "", self.create_domain, None, None)
 
-    def create_schema(self, schema):
-        self.schema = schema
-        self.window.show_input_panel("Proxy domain:", "", self.create_proxy, None, None)
+    def create_domain(self, domain):
+        self.domain = domain
+        if ( "://" not in self.domain ):
+            self.run()
+        else:
+            self.window.show_input_panel("Proxy port:", "", self.create_port, None, None)
 
-    def create_proxy(self, proxy):
-        self.proxy = proxy
+    def create_port(self, port):
+        self.port = port
         self.window.show_input_panel("User Name:", "", self.create_user, None, None)
 
     def create_user(self, user):
         self.user = user
-        self.window.show_input_panel("Password:", "", self.create_pass, None, None)
+        if ( self.user is "" ):
+            self.create_pass( "" )
+        else:
+            self.window.show_input_panel("Password:", "", self.create_pass, None, None)
 
     def create_pass(self, password):
-        url = self.schema + "://" + self.user + ":" + password + "@" + self.proxy 
+        pair = self.domain.split( "://" )
+        authentication = ""
+        if ( self.user is not "" ):
+            authentication = self.user + ":" + password + "@"
+
+        if ( self.port is not "" ):
+            self.port = ":" + self.port
+
+        url = pair[0] + "://" + authentication + pair[1] + self.port
         encoded_cred = base64.encodestring(bytes(url, "utf-8"))
         save_setting(self.dir, "proxy", "Proxy " + encoded_cred.decode("utf-8").replace("\n", ""))
 
     def is_visible(self):
         return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is False
-
 
 class DisableProxyCommand(sublime_plugin.WindowCommand):
     settings = dict()
