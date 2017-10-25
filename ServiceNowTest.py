@@ -43,7 +43,7 @@ class OpenSnowRecordCommand(sublime_plugin.TextCommand):
                 webbrowser.open_new_tab(url)
 
     def is_visible(self):
-        return is_sn(self.view.window().folders())
+        return is_sn(self.view.window().folders()) and load_settings( get_file_path( self.view.file_name() ) ) is not False
 
 
 class ServiceNowListener(sublime_plugin.EventListener):
@@ -458,7 +458,7 @@ class LoadSnowRecordCommand(sublime_plugin.WindowCommand):
             return
 
     def is_visible(self, dirs):
-        return is_sn(self.window.folders()) and len(dirs) > 0
+        return is_sn(self.window.folders()) and len(dirs) > 0 and load_settings(dirs[0]) is not False
 
 
 class ChangeTableConfig(sublime_plugin.WindowCommand):
@@ -494,7 +494,7 @@ class ChangeTableConfig(sublime_plugin.WindowCommand):
         return
 
     def is_visible(self, dirs):
-        return is_sn(self.window.folders()) and len(dirs) > 0
+        return is_sn(self.window.folders()) and len(dirs) > 0 and load_settings(dirs[0]) is not False
 
 
 class LoadAllSnowRecordCommand(sublime_plugin.WindowCommand):
@@ -515,7 +515,7 @@ class LoadAllSnowRecordCommand(sublime_plugin.WindowCommand):
         return
 
     def is_visible(self, dirs):
-        return is_sn(self.window.folders()) and len(dirs) > 0
+        return is_sn(self.window.folders()) and len(dirs) > 0 and load_settings(dirs[0]) is not False
 
 
 class LoadMyRecordCommand(sublime_plugin.WindowCommand):
@@ -538,7 +538,7 @@ class LoadMyRecordCommand(sublime_plugin.WindowCommand):
         return
 
     def is_visible(self, dirs):
-        return is_sn(self.window.folders()) and len(dirs) > 0
+        return is_sn(self.window.folders()) and len(dirs) > 0 and load_settings(dirs[0]) is not False
 
 
 class LoadModifiedRecordCommand(sublime_plugin.WindowCommand):
@@ -556,7 +556,7 @@ class LoadModifiedRecordCommand(sublime_plugin.WindowCommand):
         return
 
     def is_visible(self, dirs):
-        return is_sn(self.window.folders()) and len(dirs) > 0
+        return is_sn(self.window.folders()) and len(dirs) > 0 and load_settings(dirs[0]) is not False
 
 
 class RefreshSnowRecordCommand(sublime_plugin.WindowCommand):
@@ -759,6 +759,7 @@ class EnableProxyCommand(sublime_plugin.WindowCommand):
 
     def is_visible(self):
         return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is False
+
 
 class DisableProxyCommand(sublime_plugin.WindowCommand):
     settings = dict()
