@@ -12,6 +12,14 @@
         "id": "test",
         "caption": "Test Connection",
         "command": "test_connection"
+    }, {
+        "id": "enable_global_proxy",
+        "caption": "Enable Global Proxy",
+        "command": "enable_global_proxy"
+    }, {
+        "id": "disable_global_proxy",
+        "caption": "Disable Global Proxy",
+        "command": "disable_global_proxy"
     }, 
     // {
     //     "id": "set_update_set",
