@@ -758,7 +758,7 @@ class EnableProxyCommand(sublime_plugin.WindowCommand):
         save_setting(self.dir, "proxy", "Proxy " + encoded_cred.decode("utf-8").replace("\n", ""))
 
     def is_visible(self):
-        return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is False
+        return is_sn( self.window.folders() ) is True and has_local_proxy( self.window.folders() ) is False
 
 
 class DisableProxyCommand(sublime_plugin.WindowCommand):
@@ -770,8 +770,68 @@ class DisableProxyCommand(sublime_plugin.WindowCommand):
         save_setting(self.dir, "proxy", "")
 
     def is_visible(self):
-        return is_sn(self.window.folders()) is True and has_proxy(self.window.folders()) is True
+        return is_sn( self.window.folders() ) is True and has_local_proxy( self.window.folders() ) is True
 
+
+class EnableGlobalProxyCommand(sublime_plugin.WindowCommand):
+    dir = ""
+    domain = ""
+    port = ""
+    user = ""
+
+    def run(self):
+        self.dir = self.window.folders()[0]
+        self.window.show_input_panel("Proxy domain:", "", self.create_domain, None, None)
+
+    def create_domain(self, domain):
+        self.domain = domain
+        if ( "://" not in self.domain ):
+            self.run()
+        else:
+            self.window.show_input_panel("Proxy port:", "", self.create_port, None, None)
+
+    def create_port(self, port):
+        self.port = port
+        self.window.show_input_panel("User Name:", "", self.create_user, None, None)
+
+    def create_user(self, user):
+        self.user = user
+        if ( self.user is "" ):
+            self.create_pass( "" )
+        else:
+            self.window.show_input_panel("Password:", "", self.create_pass, None, None)
+
+    def create_pass(self, password):
+        pair = self.domain.split( "://" )
+        authentication = ""
+        if ( self.user is not "" ):
+            authentication = self.user + ":" + password + "@"
+
+        if ( self.port is not "" ):
+            self.port = ":" + self.port
+
+        url = pair[0] + "://" + authentication + pair[1] + self.port
+        encoded_cred = base64.encodestring(bytes(url, "utf-8"))
+        
+        settings = sublime.load_settings( "servicenow-sync-proxy.sublime-settings" )
+        settings.set("proxy", "Proxy " + encoded_cred.decode("utf-8").replace("\n", "") )
+        sublime.save_settings( "servicenow-sync-proxy.sublime-settings" )
+
+    def is_visible( self ):
+        return is_sn( self.window.folders() ) is True and has_global_proxy() is False and has_local_proxy( self.window.folders() ) is False
+
+
+class DisableGlobalProxyCommand(sublime_plugin.WindowCommand):
+    dir = ""
+
+    def run(self):
+        settings = sublime.load_settings( "servicenow-sync-proxy.sublime-settings" )
+        settings.set("proxy", "" )
+        sublime.save_settings( "servicenow-sync-proxy.sublime-settings" )
+        
+
+    def is_visible(self):
+        return is_sn( self.window.folders() ) is True and has_global_proxy() is True
 
 def write_doc_file(the_file, doc):
     f = open(the_file, 'wb')
@@ -932,9 +992,7 @@ def diff_doc_to_doc(original_doc, doc):
 
     return diffs
 
-
-def has_proxy(dirs):
-	# sublime.load_settings('servicenow-sync-proxy.sublime-settings') TODO: globalproxy setup
+def has_local_proxy( dirs ):
 	if is_sn(dirs) is True:
 		settings = load_settings(dirs[0])
 		if settings is not False:
@@ -946,9 +1004,36 @@ def has_proxy(dirs):
 	return False;
 
 
+def has_global_proxy():
+	s = sublime.load_settings( "servicenow-sync-proxy.sublime-settings" )
+	if not s.get("proxy") or s.get("proxy") is "":
+		return False
+
+	return True
+
+
+def has_proxy(dirs):
+	# check local proxy first (should have priority)
+	if has_local_proxy( dirs ) is True:
+		return True;
+
+	# check global proxy
+	if has_global_proxy() is True:
+		return True;
+
+	return False;
+	
+
 def http_proxy(settings):
+		proxy = ""
 		if "proxy" in settings and settings["proxy"] is not "":
 			proxy = settings["proxy"].replace("Proxy ", "")
+		else:
+			s = sublime.load_settings( "servicenow-sync-proxy.sublime-settings" )
+			if s.get( "proxy" ) and s.get( "proxy" ) is not "":
+				proxy = s.get( "proxy" ).replace("Proxy ", "")
+
+		if proxy is not "":
 			url = base64.decodestring(bytes(proxy, "utf-8")).decode("utf-8")
 			handler = urllib.request.ProxyHandler({
 						"http": url,
